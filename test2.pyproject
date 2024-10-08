@@ -1,0 +1,9 @@
+{
+    "files": [
+        "widget.py",
+        "main_window.ui",
+        "Controller_interface.py",
+        "smc100_new.py",
+        "User_interface.py"
+    ]
+}
