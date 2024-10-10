@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>300</height>
+    <height>614</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -32,7 +32,7 @@
      <rect>
       <x>100</x>
       <y>20</y>
-      <width>261</width>
+      <width>271</width>
       <height>21</height>
      </rect>
     </property>
@@ -55,7 +55,7 @@
      <rect>
       <x>100</x>
       <y>60</y>
-      <width>261</width>
+      <width>271</width>
       <height>21</height>
      </rect>
     </property>
@@ -78,7 +78,7 @@
      <rect>
       <x>100</x>
       <y>100</y>
-      <width>261</width>
+      <width>271</width>
       <height>21</height>
      </rect>
     </property>
@@ -101,7 +101,7 @@
      <rect>
       <x>100</x>
       <y>140</y>
-      <width>261</width>
+      <width>271</width>
       <height>21</height>
      </rect>
     </property>
@@ -109,7 +109,7 @@
    <widget class="QPushButton" name="button_send">
     <property name="geometry">
      <rect>
-      <x>140</x>
+      <x>150</x>
       <y>180</y>
       <width>121</width>
       <height>31</height>
@@ -124,9 +124,28 @@
      <rect>
       <x>20</x>
       <y>220</y>
-      <width>341</width>
-      <height>61</height>
+      <width>351</width>
+      <height>371</height>
      </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="button_send_2">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>180</y>
+      <width>121</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Send Command</string>
     </property>
    </widget>
   </widget>
