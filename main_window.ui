@@ -135,19 +135,6 @@
      </sizepolicy>
     </property>
    </widget>
-   <widget class="QPushButton" name="button_send_2">
-    <property name="geometry">
-     <rect>
-      <x>150</x>
-      <y>180</y>
-      <width>121</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Send Command</string>
-    </property>
-   </widget>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>

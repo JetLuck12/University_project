@@ -6,6 +6,8 @@ from main_window_ui import Ui_MainWindow
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtCore import QThread, Signal, QProcess
 
+#для интерфейса введи в консоль pyside6-uic main_window.ui -o main_window_ui.py
+
 # Глобальная переменная для хранения объекта Redis-клиента
 controller_commands_redis = None
 controller_commands_pubsub = None
@@ -17,21 +19,29 @@ controller_output_channel = 'controller_output'
 # Шаблон команды
 message = {'cmd': '', 'motor': '', 'arg1': 0, 'arg2': 0}
 
-# Поток для подписки и получения данных от контроллера
 class ControllerListenerThread(QThread):
+    # Передаём строку через сигнал
     message_received = Signal(str)  # Сигнал для передачи сообщений в основной поток
 
     def run(self):
         global controller_output_pubsub
         while True:
-            time.sleep(1)
+            time.sleep(1)  # Спим 1 секунду для ограничения частоты
             if controller_output_pubsub:
+                # Получаем сообщение от pubsub
                 message_ = controller_output_pubsub.parse_response()
-                if message_:
-                    if message_[0].decode('utf-8') == 'subscribe':
-                        continue
-                    else:
-                        self.message_received.emit(str(message_))  # Отправляем сообщение в основной поток
+
+                # Преобразуем байтовое сообщение в JSON-строку перед отправкой
+                if isinstance(message_, list):
+                    try:
+                        # Преобразуем сообщение в строку JSON для передачи через сигнал
+                        json_message = json.dumps([msg.decode('utf-8') if isinstance(msg, bytes) else msg for msg in message_])
+                        self.message_received.emit(json_message)  # Отправляем как строку
+                    except Exception as e:
+                        print(f"Error serializing message: {e}")
+                else:
+                    self.message_received.emit(str(message_))
+
 
 # Основное окно приложения
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -60,6 +70,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Запуск контроллера при старте программы
         self.start_controller()
 
+    # Метод отправки команды в Redis
     # Метод отправки команды в Redis
     def send_command(self):
         global controller_commands_redis
@@ -91,15 +102,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             )
             self.text_output.append(help_text)
         elif command == "end":
+            message['cmd'] = 'end'
+            controller_commands_redis.publish(controller_commands_channel, json.dumps(message))
             self.close()
         else:
             if command and motor:
+                # Проверяем, что команда не пустая
+                if not command.strip():
+                    self.text_output.append("Command cannot be empty")
+                    return
+
+                # Заполняем сообщение
                 message['cmd'] = command
                 message['motor'] = motor
                 message['arg1'] = arg1 if arg1 else ''
                 message['arg2'] = arg2 if arg2 else ''
 
-                # Публикуем команду в Redis
+                # Проверяем, что сообщение валидное (например, не пустое)
+                if not message['cmd']:
+                    self.text_output.append("Command is missing.")
+                    return
+
+                # Публикуем команду в Redis только если сообщение валидное
                 json_pub = json.dumps(message)
                 controller_commands_redis.publish(controller_commands_channel, json_pub)
             else:
@@ -132,13 +156,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QThread.sleep(1)  # Ждём, пока сервер запустится
             self.connect_redis()
 
+    def controller_finished(self, exitCode, exitStatus):
+            if exitStatus == QProcess.NormalExit:
+                self.text_output.append(f"Controller finished normally with exit code {exitCode}")
+            else:
+                self.text_output.append(f"Controller crashed with exit code {exitCode}")
+
+            # Если требуется перезапуск:
+            self.restart_controller()
+
     # Метод запуска контроллера
     def start_controller(self):
         self.controller_process.start("python", ["Controller_interface.py"])
         self.controller_process.readyReadStandardOutput.connect(self.handle_controller_output)
         self.controller_process.readyReadStandardError.connect(self.handle_controller_error)
 
+        self.controller_process.finished.connect(self.controller_finished)
         self.text_output.append("Controller interface is started!")
+
+    # Перезапуск контроллера
+    def restart_controller(self):
+        self.text_output.append("Restarting Controller interface...")
+        self.start_controller()
+
+
 
     # Метод подключения к Redis
     def connect_redis(self):
@@ -166,8 +207,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # Метод для обработки вывода Redis сервера
     def handle_redis_output(self):
         try:
-            output = self.redis_process.readAllStandardOutput().data().decode('latin-1')  # Используем более устойчивую кодировку
-            self.text_output.append(f"Redis Output: {output}")
+            output = controller_output_pubsub.parse_response()
+            if output[0].decode('utf-8') == 'message':
+                self.text_output.append(f"Redis Output: {output}")
         except UnicodeDecodeError as e:
             self.text_output.append(f"Decoding error in Redis Output: {e}")
 
@@ -195,6 +237,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # Метод остановки Redis сервера при закрытии программы
     def closeEvent(self, event):
+
+        message['cmd'] = 'end'
+        controller_commands_redis.publish(controller_commands_channel, json.dumps(message))
+
         # Всегда пытаемся отключить сервер Redis
         self.shutdown_redis_server()
 
@@ -203,27 +249,46 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.redis_process.terminate()
             self.text_output.append("Stopping Redis server...")
 
+        if self.controller_process.state() == QProcess.Running:
+            self.controller_process.terminate()  # Попробовать завершить нормально
+            self.text_output.append("Stopping controller...")
+            if not self.controller_process.waitForFinished(3000):  # Подождать 3 секунды
+                self.controller_process.kill()  # Принудительно завершить, если не завершился
+            self.text_output.append("Controller process terminated.")
+
         event.accept()  # Завершаем программу
 
     # Метод для обработки вывода контроллера
     def handle_controller_output(self):
-        output = self.controller_process.readAllStandardOutput().data().decode()
-        self.text_output.append(f"Controller Output: {output}")
+        output = self.controller_process.readAllStandardOutput().data()
+        self.text_output.append(f"Controller handle Output: {output}")
 
     # Метод для обработки ошибок контроллера
     def handle_controller_error(self):
-        error = self.controller_process.readAllStandardError().data().decode()
+        error = self.controller_process.readAllStandardError().data()
         self.text_output.append(f"Controller Error: {error}")
 
-    # Обновление текстового поля при получении сообщения от контроллера
-    def update_output(self, message):
-        if message[0].encode('utf-8') == 'message':
-            # Если сообщение начинается с 'message', выводим третье сообщение
-            decoded_message = message[2].encode('utf-8')
-            self.text_output.append(f"{decoded_message}")
-        else:
-            # Если формат сообщения отличается, выводим его целиком
-            self.text_output.append(f"Controller: {message}")
+    def update_output(self, json_message):
+        try:
+            # Десериализуем строку JSON обратно в список
+            message = json.loads(json_message)
+
+            # Проверяем, является ли сообщение списком и содержит ли оно хотя бы 3 элемента
+            if isinstance(message, list) and len(message) >= 3:
+                # Проверяем, что это сообщение типа 'message'
+                if message[0] == 'message':  # Здесь уже строка, т.к. было декодирование
+                    # Выводим третий элемент
+                    self.text_output.append(f"Controller Redis Output: {message[2]}")
+                else:
+                    self.text_output.append(f"Unexpected message format: {message}")
+            else:
+                # Если сообщение не соответствует ожидаемой структуре
+                self.text_output.append(f"Invalid message structure: {message}")
+        except json.JSONDecodeError as e:
+            self.text_output.append(f"Error decoding JSON: {e}")
+        except Exception as e:
+            self.text_output.append(f"Error processing message: {e}")
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
