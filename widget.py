@@ -1,10 +1,11 @@
 import sys
-import time
 import json
+import time
 import redis
-from main_window_ui import Ui_MainWindow
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtCore import QThread, Signal, QProcess
+from main_window_ui import Ui_MainWindow  # Импорт UI
+from motor_polling import MotorPollingThread  # Импорт потока опроса моторов
 
 #для интерфейса введи в консоль pyside6-uic main_window.ui -o main_window_ui.py
 
@@ -51,6 +52,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Инициализация интерфейса через .ui файл
         self.setupUi(self)
 
+        # Установить текстовые поля и компоненты
+        self.text_output.append("Welcome to Motor Controller")
+        self.combo_motor.addItems(['motor_1', 'motor_2', 'motor_3'])  # Добавляем доступные моторы
+
         # Привязка кнопки к методу отправки команд
         self.button_send.clicked.connect(self.send_command)
 
@@ -69,6 +74,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Запуск контроллера при старте программы
         self.start_controller()
+
+        # Запуск потока опроса моторов
+        self.motor_polling_thread = MotorPollingThread()
+        self.motor_polling_thread.motor_status_received.connect(self.update_motor_status)
+        self.motor_polling_thread.start()
 
     # Метод отправки команды в Redis
     # Метод отправки команды в Redis
@@ -235,8 +245,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except redis.exceptions.ConnectionError:
             self.text_output.append("Redis server is not running, no need to shut down.")
 
+    def update_motor_status(self, motor_data):
+            motor_name = motor_data["motor"]
+            status = motor_data["status"]
+
+            # Обновляем статус выбранного мотора
+            selected_motor = self.combo_motor.currentText()
+
+            if motor_name == selected_motor:
+                self.text_motor_status.clear()  # Очищаем перед обновлением
+                self.text_motor_status.append(f"Motor: {motor_name}")
+                self.text_motor_status.append(f"Position: {status['position']}")
+                self.text_motor_status.append(f"State: {status['state']}")
+                self.text_output.append(f"Received status for {motor_name}")
+
     # Метод остановки Redis сервера при закрытии программы
     def closeEvent(self, event):
+
+        self.motor_polling_thread.stop()
 
         message['cmd'] = 'end'
         controller_commands_redis.publish(controller_commands_channel, json.dumps(message))
