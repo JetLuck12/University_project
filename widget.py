@@ -5,6 +5,7 @@ import redis
 from main_window_ui import Ui_MainWindow
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtCore import QThread, Signal, QProcess
+from motor_polling import MotorPollingThread  # Импорт потока опроса
 
 #для интерфейса введи в консоль pyside6-uic main_window.ui -o main_window_ui.py
 
@@ -69,6 +70,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Запуск контроллера при старте программы
         self.start_controller()
+
+        # Запуск потока опроса моторов
+        self.motor_polling_thread = MotorPollingThread()
+        self.motor_polling_thread.motor_status_received.connect(self.update_motor_status)
+        self.motor_polling_thread.start()
 
     # Метод отправки команды в Redis
     # Метод отправки команды в Redis
@@ -235,8 +241,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except redis.exceptions.ConnectionError:
             self.text_output.append("Redis server is not running, no need to shut down.")
 
+    # Обработчик обновления статуса моторов
+    def update_motor_status(self, motor_data):
+        motor_name = motor_data["motor"]
+        status = motor_data["status"]
+
+        # Пример обновления интерфейса
+        self.text_output.append(f"{motor_name} - Position: {status['position']}, State: {status['state']}")
+
+
     # Метод остановки Redis сервера при закрытии программы
     def closeEvent(self, event):
+        self.motor_polling_thread.stop()
 
         message['cmd'] = 'end'
         controller_commands_redis.publish(controller_commands_channel, json.dumps(message))

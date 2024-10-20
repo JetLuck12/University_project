@@ -4,6 +4,7 @@
         "main_window.ui",
         "Controller_interface.py",
         "smc100_new.py",
-        "User_interface.py"
+        "User_interface.py",
+        "Status_poll.py"
     ]
 }
