@@ -6,23 +6,16 @@ from PySide6.QtCore import QThread, Signal
 class MotorPollingThread(QThread):
     motor_status_received = Signal(dict)  # Сигнал для передачи статуса моторов в основной поток
 
-    def __init__(self):
+    def __init__(self, motors):
         super().__init__()
-
-        # Список моторов для опроса
-        self.motors = {
-            'motor_1': {"axis": 1},
-            'motor_2': {"axis": 2},
-            'motor_3': {"axis": 3},
-        }
+        self.motors = motors
         self.polling_active = True  # Флаг для завершения потока
 
     # Пример функции, которая симулирует опрос мотора
     def get_motor_status(self, motor_name, axis):
-        # Здесь можно использовать реальный метод для получения статуса мотора (например, от SMCMotorHW)
         status = {
-            "position": 100,  # Положение мотора
-            "state": "moving",  # Состояние: 'moving', 'stopped'
+            "position": self.motors[motor_name].get_postion(axis),  # Положение мотора
+            "state": self.motors[motor_name].get_motion(axis),  # Состояние: 'moving', 'stopped'
             "axis": axis
         }
         return status
@@ -31,7 +24,7 @@ class MotorPollingThread(QThread):
     def run(self):
         while self.polling_active:
             # Опрос всех моторов
-            for motor_name, motor_info in self.motors.items():
+            for motor_name, motor_axes in self.motors.items():
                 axis = motor_info["axis"]
                 status = self.get_motor_status(motor_name, axis)
 
@@ -44,6 +37,11 @@ class MotorPollingThread(QThread):
 
             # Задержка перед следующим опросом (например, 1 секунда)
             time.sleep(1)
+
+    def update_motors(self, updated_motors):
+            self.motors = updated_motors  # Обновляем список моторов
+            print(f"Motors updated: {self.motors}")
+
 
     # Метод для остановки потока
     def stop(self):

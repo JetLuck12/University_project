@@ -2,10 +2,12 @@ import sys
 import time
 import json
 import redis
+from Controller_interface import SMCBaseMotorController
+from smc100_new import SMCMotorHW
 from main_window_ui import Ui_MainWindow
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtCore import QThread, Signal, QProcess
-from motor_polling import MotorPollingThread  # Импорт потока опроса
+from Status_poll import MotorPollingThread  # Импорт потока опроса
 
 #для интерфейса введи в консоль pyside6-uic main_window.ui -o main_window_ui.py
 
@@ -19,6 +21,8 @@ controller_output_channel = 'controller_output'
 
 # Шаблон команды
 message = {'cmd': '', 'motor': '', 'arg1': 0, 'arg2': 0}
+
+COMMANDS_WITHOUT_MOTOR = {"load", "save", "help"}
 
 class ControllerListenerThread(QThread):
     # Передаём строку через сигнал
@@ -46,6 +50,8 @@ class ControllerListenerThread(QThread):
 
 # Основное окно приложения
 class MainWindow(QMainWindow, Ui_MainWindow):
+    motors_updated = Signal(dict)
+
     def __init__(self):
         super().__init__()
 
@@ -57,7 +63,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Настройки окна
         self.setWindowTitle("Controller Commands")
-        self.setGeometry(200, 200, 400, 614)
 
         # Процесс для Redis сервера
         self.redis_process = QProcess(self)
@@ -71,8 +76,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Запуск контроллера при старте программы
         self.start_controller()
 
+        self.motors = {}
+
+        # Устанавливаем команды в выпадающий список
+        self.combo_command.addItems([
+            "load", "save", "create", "add", "delete",
+            "pos", "state", "start", "stop", "status", "calibrate"
+        ])
+
+        # Установить текстовые поля и компоненты
+        self.text_output.append("Welcome to Motor Controller")
+        self.combo_motor.addItems(self.motors.keys())  # Добавляем доступные моторы
+
+        self.combo_command.currentIndexChanged.connect(self.on_command_changed)
+
         # Запуск потока опроса моторов
-        self.motor_polling_thread = MotorPollingThread()
+        self.motor_polling_thread = MotorPollingThread(self.motors)
+        self.motors_updated.connect(self.motor_polling_thread.update_motors)
         self.motor_polling_thread.motor_status_received.connect(self.update_motor_status)
         self.motor_polling_thread.start()
 
@@ -85,55 +105,43 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.text_output.append("Redis is not connected")
             return
 
-        command = self.line_command.text().strip().lower()
-        motor = self.line_motor.text().strip()
+        command = self.combo_command.currentText()
+        motor = self.combo_motor.currentText()
         arg1 = self.line_arg1.text().strip()
         arg2 = self.line_arg2.text().strip()
 
-        if command == "help":
-            help_text = (
-                "List of commands and args:\n"
-                "Load             [\"filename\"]\n"
-                "Save             [\"filename\"]\n"
-                "Create           [\"family\\domain\\name\"]\n"
-                "Add              [motor, axis]\n"
-                "Delete           [motor, axis]\n"
-                "Pos              [motor, axis]\n"
-                "State            [motor, axis]\n"
-                "Start            [motor, axis]\n"
-                "Stop             [motor, axis]\n"
-                "Status           [motor, axis]\n"
-                "Calibrate        [diode_motor, size]\n"
-                "End\n"
-            )
-            self.text_output.append(help_text)
-        elif command == "end":
-            message['cmd'] = 'end'
-            controller_commands_redis.publish(controller_commands_channel, json.dumps(message))
-            self.close()
-        else:
-            if command and motor:
-                # Проверяем, что команда не пустая
-                if not command.strip():
-                    self.text_output.append("Command cannot be empty")
-                    return
-
-                # Заполняем сообщение
-                message['cmd'] = command
-                message['motor'] = motor
-                message['arg1'] = arg1 if arg1 else ''
-                message['arg2'] = arg2 if arg2 else ''
-
-                # Проверяем, что сообщение валидное (например, не пустое)
-                if not message['cmd']:
-                    self.text_output.append("Command is missing.")
-                    return
-
-                # Публикуем команду в Redis только если сообщение валидное
-                json_pub = json.dumps(message)
-                controller_commands_redis.publish(controller_commands_channel, json_pub)
+        if command:
+            if command == "create":
+                self.add_motor(motor, arg1)
+            elif command == "add":
+                self.motors[motor][0].addDevice(arg1)
+            elif command == "end":
+                message['cmd'] = 'end'
+                controller_commands_redis.publish(controller_commands_channel, json.dumps(message))
+                self.close()
             else:
-                self.text_output.append("Not enough arguments")
+                if command and motor:
+                    # Проверяем, что команда не пустая
+                    if not command.strip():
+                        self.text_output.append("Command cannot be empty")
+                        return
+
+                    # Заполняем сообщение
+                    message['cmd'] = command
+                    message['motor'] = motor
+                    message['arg1'] = arg1 if arg1 else ''
+                    message['arg2'] = arg2 if arg2 else ''
+
+                    # Проверяем, что сообщение валидное (например, не пустое)
+                    if not message['cmd']:
+                        self.text_output.append("Command is missing.")
+                        return
+
+                    # Публикуем команду в Redis только если сообщение валидное
+                    json_pub = json.dumps(message)
+                    controller_commands_redis.publish(controller_commands_channel, json_pub)
+                else:
+                    self.text_output.append("Not enough arguments")
 
     # Метод для проверки, запущен ли Redis
     def is_redis_running(self, port=6379):
@@ -246,8 +254,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         motor_name = motor_data["motor"]
         status = motor_data["status"]
 
-        # Пример обновления интерфейса
-        self.text_output.append(f"{motor_name} - Position: {status['position']}, State: {status['state']}")
+        # Обновляем статус выбранного мотора
+        selected_motor = self.combo_motor.currentText()
+
+        if motor_name == selected_motor:
+            self.text_motor_status.clear()  # Очищаем перед обновлением
+            self.text_motor_status.append(f"Motor: {motor_name}")
+            self.text_motor_status.append(f"Position: {status['position']}")
+            self.text_motor_status.append(f"State: {status['state']}")
+            self.text_output.append(f"Received status for {motor_name}")
+
+    # Отключение/включение выбора мотора в зависимости от команды
+    def on_command_changed(self):
+        selected_command = self.combo_command.currentText()
+        if selected_command in COMMANDS_WITHOUT_MOTOR:
+            self.combo_motor.setEnabled(False)  # Отключаем выбор мотора
+        else:
+            self.combo_motor.setEnabled(True)  # Включаем выбор мотора
 
 
     # Метод остановки Redis сервера при закрытии программы
@@ -304,6 +327,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.text_output.append(f"Error decoding JSON: {e}")
         except Exception as e:
             self.text_output.append(f"Error processing message: {e}")
+
+
+    # Метод для добавления нового мотора
+    def add_motor(self, motor_name, Port):
+        # Добавляем новый мотор в список
+        axes = {}
+        smc100 = SMCBaseMotorController(Port, motor_name)
+        self.motors[motor_name] = smc100,axes
+        self.combo_motor.addItem(motor_name)  # Обновляем список в интерфейсе
+
+        # Отправляем сигнал в поток об обновлении списка моторов
+        self.motors_updated.emit(self.motors)
+        self.text_output.append(f"Added motor: {motor_name}")
+
+
 
 
 if __name__ == "__main__":
