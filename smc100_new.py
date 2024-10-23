@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import serial
-#from serial import Serial
 import time
 
 from math import floor

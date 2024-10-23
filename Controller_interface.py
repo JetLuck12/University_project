@@ -1,30 +1,5 @@
 from smc100_new import SMCMotorHW
-import redis
 import json
-import os
-import time
-import struct
-
-DefaultPort = "COM10"
-Y_motors = (2, 5, 7)
-X_motors = (1, 3, 6)
-
-# Redis connect
-redis_host = 'localhost'
-redis_port = 6379
-controller_commands_channel = 'controller_commands'
-controller_output_channel = 'controller_output'
-
-controller_commands_redis = redis.StrictRedis(host=redis_host, port=redis_port)
-controller_commands_pubsub = controller_commands_redis.pubsub()
-controller_commands_pubsub.subscribe(controller_commands_channel)
-
-controller_output_redis = redis.StrictRedis(host=redis_host, port=redis_port)
-
-motors = {}
-
-DataPipe = r'\\.\pipe\DataPipe'
-MotorPipe = r'\\.\pipe\MotorPipe'
 
 class SMCBaseMotorController():
     def __init__(self, Port, name):
@@ -43,37 +18,34 @@ class SMCBaseMotorController():
     def execute_command(self, cmd, arg1, arg2):
         """Execute command and return value"""
         command_name = cmd.lower()
-        try:
-            if command_name == 'add':
-                axis = int(arg1)
-                self.AddDevice(axis)
-                return "New device added"
-            elif command_name == 'delete':
-                axis = int(arg1)
-                self.DeleteDevice(axis)
-                return "Device deleted"
-            elif command_name == 'pos':
-                axis = int(arg1)
-                position = self.ReadOne(axis)
-                return f"Position of {axis} is {position}"
-            elif command_name == 'state':
-                axis = int(arg1)
-                state = self.StateOne(axis)
-                return f"State of {axis} is: {state}"
-            elif command_name == 'start':
-                axis, position = int(arg1), int(arg2)
-                self.StartOne(axis, position)
-                return f"Motor of axis {axis} going to {position}"
-            elif command_name == 'stop':
-                axis = int(arg1)
-                self.StopOne(axis)
-                return f"{axis} stopped"
-            elif command_name == 'status':
-                return self.status(int(arg1))
-            else:
-                return f"Unknown command: {cmd}"
-        except Exception as e:
-            return f"Error in execution function: {e}"
+        if command_name == 'add':
+            axis = int(arg1)
+            self.AddDevice(axis)
+            return "New device added"
+        elif command_name == 'delete':
+            axis = int(arg1)
+            self.DeleteDevice(axis)
+            return "Device deleted"
+        elif command_name == 'pos':
+            axis = int(arg1)
+            position = self.ReadOne(axis)
+            return f"Position of {axis} is {position}"
+        elif command_name == 'state':
+            axis = int(arg1)
+            state = self.StateOne(axis)
+            return f"State of {axis} is: {state}"
+        elif command_name == 'start':
+            axis, position = int(arg1), int(arg2)
+            self.StartOne(axis, position)
+            return f"Motor of axis {axis} going to {position}"
+        elif command_name == 'stop':
+            axis = int(arg1)
+            self.StopOne(axis)
+            return f"{axis} stopped"
+        elif command_name == 'status':
+            return self.status(int(arg1))
+        else:
+            return f"Unknown command: {cmd}"
 
     def AddDevice(self, axis):
         self.attributes[axis] = {}
@@ -190,123 +162,3 @@ class SMCBaseMotorController():
             self.attributes[axis]['upper_limit'] = float(value)
         elif par_name == 'revision':
             pass
-
-def calibration(self, size_x, size_y):
-    #X
-    photo_diod_x = 11
-    self.StartOne(photo_diod_x, 2);
-    while(motor.smc100.getPosition(photo_diod_x) != 0):
-        motor_pipe(-3)
-        time.sleep(0.1)
-    self.StartOne(photo_diod_x, 250);
-    motor_pipe(-1)
-    while(self.smc100.getPosition(photo_diod_x) < 19):
-        if(photo_pipe(DataPipe) == -1):
-            pos = self.smc100.getPosition(photo_diod_x)
-            if(pos is None):
-                motor_pipe(-2)
-            else:
-                motor_pipe(pos)
-    xPos = photo_pipe(DataPipe)
-    self.StartOne(photo_diod_x, xPos)
-    #Y
-    photo_diod_y = 10
-    self.StartOne(photo_diod_y, 2);
-    while(motor.smc100.getPosition(1) != 0):
-        motor_pipe(-3)
-        time.sleep(0.1)
-    self.StartOne(photo_diod_y, 250);
-    motor_pipe(-1)
-    while(self.smc100.getPosition(1) < 19):
-        if(photo_pipe(DataPipe) == -1):
-            pos = self.smc100.getPosition(photo_diod_y)
-            if(pos is None):
-                motor_pipe(-2)
-            else:
-                motor_pipe(pos)
-    yPos = photo_pipe(DataPipe)
-    self.StartOne(photo_diod_y, yPos)
-    for axis in X_motors:
-        self.StartOne(axis, xPos)
-    for axis in Y_motors:
-        self.StartOne(axis, yPos)
-
-def create_motor(name, Port = "COM3"):
-    smc100 = SMCBaseMotorController(Port, name)
-    motors[name] = smc100
-    return f"Motor {name} created"
-
-if __name__ == "__main__":
-    """Get command from redis and execute them"""
-    exit_flag = 0;
-    motor = None
-    while exit_flag == 0:
-        response = "Empty response"
-        try:
-            messages = controller_commands_pubsub.parse_response()
-            if messages[0].decode('utf-8') == 'message':
-                print("Received messages:", messages)
-                message = json.loads(messages[2])
-                print(message)
-                if message["cmd"] == 'create':
-                    response = create_motor(message["motor"])
-                elif message["cmd"] == 'calibrate':
-                    motor.calibration(message["arg1"], message["arg2"])
-                    response = "motor calibrated"
-                elif message["cmd"]:
-                    if message["motor"] in motors:
-                        motor = motors[message["motor"]]
-                        response = motor.execute_command(message["cmd"], message["arg1"], message["arg2"])
-                    else:
-                        response = f"Error: Motor with key '{message['motor']}' not found."
-        except Exception as e:
-            response = f"Controller error:  {e}"
-        finally:
-            controller_output_redis.publish(controller_output_channel, response)
-
-        # for motor_name in motors:
-        #     motor = motors[motor_name]
-        #     for axis in motor.attributes:
-        #         if motor.smc100.getPosition(axis) <  motor.attributes[axis]['lower_limit'] + 0.5 or motor.smc100.getPosition(axis) >  motor.attributes[axis]['upper_limit'] - 0.5:
-        #             motor.error = 1
-        #             motor.StopOne(axis)
-        #             controller_commands_redis.publish(controller_output_channel, f'Motor {motor.name} on {axis} is stopped')
-
-def photo_pipe(pipe_name):
-    while not os.path.exists(pipe_name):
-        time.sleep(0.01)
-
-    with open(pipe_name, 'rb') as pipe:
-        data = pipe.read(4)
-        number = struct.unpack('i', data)[0]
-        print(f"Received number: {number}")
-    return number
-
-
-def motor_pipe(pos):
-    while not os.path.exists(MotorPipe):
-        print("Waiting for the pipe to be created...")
-        time.sleep(0.01)
-
-    with open(MotorPipe, 'wb') as pipe:
-        message = struct.pack('i', pos)
-        pipe.write(message)
-        print("Message sent from Python")
-
-
-#            self.attributes[axis]['revision'] = str(value)
-
-#Tests
-# def test_sardana():
-#     device_name = "test/motor1"
-#     device_proxy = PyTango.DeviceProxy(device_name)
-
-
-#     inst = PyTango.DeviceProxy("sardana/motor1/1")
-#     inst = SardanaDevice("sardana/motor1/1")
-
-#     print(inst.ping())
-#     print(inst.state())
-#     smc100 = SMCBaseMotorController(inst,{})
-
-# test_sardana()
