@@ -93,8 +93,8 @@ class SMCBaseMotorController():
                 'error': self.error,
                 'move_status': self.StateOne(axis),
                 'coord': self.ReadOne(axis),
-                'velocity': self.smc100.GetAxisPar(axis, 'velocity'),
-                'acceleration': self.smc100.GetAxisPar(axis, 'acceleration')
+#                'velocity': self.smc100.GetAxisPar(axis, 'velocity'),
+#                'acceleration': self.smc100.GetAxisPar(axis, 'acceleration')
             }
             return json.dumps(status)
 

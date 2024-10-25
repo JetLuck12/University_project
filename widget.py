@@ -66,7 +66,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     if not command.strip():
                         self.text_output.append("Command cannot be empty")
                         return
-                    response = self.motors[motor][0].execute_command(command, arg1, arg2)
+                    response = self.motors[motor].execute_command(command, arg1, arg2)
                     self.text_output.append(f"response:{response}")
                 else:
                     self.text_output.append("Not enough arguments")
@@ -75,15 +75,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def update_motor_status(self, motor_data):
         motor_name = motor_data["motor"]
         status = motor_data["status"]
-
+        axis = status['axis']
         # Обновляем статус выбранного мотора
         selected_motor = self.combo_motor.currentText()
+        selected_axis = self.line_arg1.text().strip()
 
-        if motor_name == selected_motor:
+        if str(motor_name) == str(selected_motor) and str(axis) == str(selected_axis):
             self.motor_state.clear()
-            self.motor_pos.clear()
-            self.motor_pos.append(f"Position: {status['position']}")
-            self.motor_state.append(f"State: {status['state']}")
+            self.motor_pos.display(status['position'])
+            self.motor_state.append(status['state'])
 
     # Отключение/включение выбора мотора в зависимости от команды
     def on_command_changed(self):
@@ -100,11 +100,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         event.accept()  # Завершаем программу
 
     # Метод для добавления нового мотора
-    def add_motor(self, motor_name, Port = "COM10"):
+    def add_motor(self, motor_name, Port):
         # Добавляем новый мотор в список
-        axes = {}
+        if(Port == ""):
+            Port = "COM10"
         smc100 = SMCBaseMotorController(Port, motor_name)
-        self.motors[motor_name] = smc100,axes
+        self.motors[motor_name] = smc100
         self.combo_motor.addItem(motor_name)  # Обновляем список в интерфейсе
 
         # Отправляем сигнал в поток об обновлении списка моторов

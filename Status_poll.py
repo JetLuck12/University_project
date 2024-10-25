@@ -14,8 +14,8 @@ class MotorPollingThread(QThread):
     # Пример функции, которая симулирует опрос мотора
     def get_motor_status(self, motor_name, axis):
         status = {
-            "position": self.motors[motor_name][0].get_postion(axis),  # Положение мотора
-            "state": self.motors[motor_name][0].get_motion(axis),  # Состояние: 'moving', 'stopped'
+            "position": self.motors[motor_name].ReadOne(axis),  # Положение мотора
+            "state": self.motors[motor_name].StateOne(axis),  # Состояние: 'moving', 'stopped'
             "axis": axis
         }
         return status
@@ -25,7 +25,7 @@ class MotorPollingThread(QThread):
         while self.polling_active:
             # Опрос всех моторов
             for motor_name, motor_info in self.motors.items():
-                for axis in motor_info[1]:
+                for axis in self.motors[motor_name]._motors:
                     status = self.get_motor_status(motor_name, axis)
 
                     # Передача статуса через сигнал
