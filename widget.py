@@ -80,11 +80,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         selected_motor = self.combo_motor.currentText()
 
         if motor_name == selected_motor:
-            self.text_motor_status.clear()  # Очищаем перед обновлением
-            self.text_motor_status.append(f"Motor: {motor_name}")
-            self.text_motor_status.append(f"Position: {status['position']}")
-            self.text_motor_status.append(f"State: {status['state']}")
-            self.text_output.append(f"Received status for {motor_name}")
+            self.motor_state.clear()
+            self.motor_pos.clear()
+            self.motor_pos.append(f"Position: {status['position']}")
+            self.motor_state.append(f"State: {status['state']}")
 
     # Отключение/включение выбора мотора в зависимости от команды
     def on_command_changed(self):

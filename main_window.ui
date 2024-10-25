@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>600</width>
-    <height>700</height>
+    <height>570</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -119,30 +119,14 @@
      </rect>
     </property>
     <property name="text">
-     <string>Motor Status and Position</string>
-    </property>
-   </widget>
-   <widget class="QTextEdit" name="text_motor_status">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>260</y>
-      <width>581</width>
-      <height>120</height>
-     </rect>
-    </property>
-    <property name="readOnly">
-     <bool>true</bool>
-    </property>
-    <property name="placeholderText">
-     <string>Motor status will be displayed here...</string>
+     <string>Motor Status </string>
     </property>
    </widget>
    <widget class="QLabel" name="label_target_position">
     <property name="geometry">
      <rect>
       <x>120</x>
-      <y>400</y>
+      <y>310</y>
       <width>351</width>
       <height>21</height>
      </rect>
@@ -154,8 +138,8 @@
    <widget class="QDoubleSpinBox" name="spinbox_position">
     <property name="geometry">
      <rect>
-      <x>250</x>
-      <y>430</y>
+      <x>330</x>
+      <y>310</y>
       <width>120</width>
       <height>21</height>
      </rect>
@@ -174,7 +158,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>470</y>
+      <y>340</y>
       <width>581</width>
       <height>221</height>
      </rect>
@@ -196,6 +180,39 @@
      </rect>
     </property>
    </widget>
+   <widget class="QLCDNumber" name="motor_pos">
+    <property name="geometry">
+     <rect>
+      <x>230</x>
+      <y>270</y>
+      <width>64</width>
+      <height>23</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_motor_info_2">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>270</y>
+      <width>101</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Motor Position</string>
+    </property>
+   </widget>
+   <widget class="QTextEdit" name="motor_state">
+    <property name="geometry">
+     <rect>
+      <x>230</x>
+      <y>230</y>
+      <width>104</width>
+      <height>21</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
@@ -204,7 +221,6 @@
   <tabstop>line_arg1</tabstop>
   <tabstop>line_arg2</tabstop>
   <tabstop>button_send</tabstop>
-  <tabstop>text_motor_status</tabstop>
   <tabstop>spinbox_position</tabstop>
   <tabstop>text_output</tabstop>
  </tabstops>
