@@ -112,46 +112,14 @@
    <widget class="QLabel" name="label_motor_info">
     <property name="geometry">
      <rect>
-      <x>120</x>
-      <y>230</y>
-      <width>351</width>
+      <x>110</x>
+      <y>270</y>
+      <width>71</width>
       <height>21</height>
      </rect>
     </property>
     <property name="text">
      <string>Motor Status </string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_target_position">
-    <property name="geometry">
-     <rect>
-      <x>120</x>
-      <y>310</y>
-      <width>351</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Set Target Position for Motor:</string>
-    </property>
-   </widget>
-   <widget class="QDoubleSpinBox" name="spinbox_position">
-    <property name="geometry">
-     <rect>
-      <x>330</x>
-      <y>310</y>
-      <width>120</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="minimum">
-     <double>0.000000000000000</double>
-    </property>
-    <property name="maximum">
-     <double>1000.000000000000000</double>
-    </property>
-    <property name="singleStep">
-     <double>1.000000000000000</double>
     </property>
    </widget>
    <widget class="QTextEdit" name="text_output">
@@ -184,8 +152,8 @@
     <property name="geometry">
      <rect>
       <x>230</x>
-      <y>270</y>
-      <width>64</width>
+      <y>300</y>
+      <width>161</width>
       <height>23</height>
      </rect>
     </property>
@@ -631,13 +599,16 @@
       </disabled>
      </palette>
     </property>
+    <property name="digitCount">
+     <number>8</number>
+    </property>
    </widget>
    <widget class="QLabel" name="label_motor_info_2">
     <property name="geometry">
      <rect>
-      <x>120</x>
-      <y>270</y>
-      <width>101</width>
+      <x>110</x>
+      <y>300</y>
+      <width>71</width>
       <height>21</height>
      </rect>
     </property>
@@ -649,9 +620,32 @@
     <property name="geometry">
      <rect>
       <x>230</x>
-      <y>230</y>
+      <y>270</y>
       <width>161</width>
       <height>21</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>240</y>
+      <width>61</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Choose axis</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="combo_axis">
+    <property name="geometry">
+     <rect>
+      <x>230</x>
+      <y>240</y>
+      <width>161</width>
+      <height>22</height>
      </rect>
     </property>
    </widget>
@@ -663,7 +657,6 @@
   <tabstop>line_arg1</tabstop>
   <tabstop>line_arg2</tabstop>
   <tabstop>button_send</tabstop>
-  <tabstop>spinbox_position</tabstop>
   <tabstop>text_output</tabstop>
  </tabstops>
  <resources/>

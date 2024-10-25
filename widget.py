@@ -38,9 +38,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Установить текстовые поля и компоненты
         self.text_output.append("Welcome to Motor Controller")
+        print(self.motors.keys())
         self.combo_motor.addItems(self.motors.keys())  # Добавляем доступные моторы
 
         self.combo_command.currentIndexChanged.connect(self.on_command_changed)
+        self.button_send.clicked.connect(self.on_motor_changed)
 
         # Запуск потока опроса моторов
         self.motor_polling_thread = MotorPollingThread(self.motors)
@@ -78,7 +80,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         axis = status['axis']
         # Обновляем статус выбранного мотора
         selected_motor = self.combo_motor.currentText()
-        selected_axis = self.line_arg1.text().strip()
+        selected_axis = self.combo_axis.currentText()
 
         if str(motor_name) == str(selected_motor) and str(axis) == str(selected_axis):
             self.motor_state.clear()
@@ -93,6 +95,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             self.combo_motor.setEnabled(True)  # Включаем выбор мотора
 
+    def on_motor_changed(self):
+        if self.combo_motor.currentText() != '':
+            selected_motor = self.motors[self.combo_motor.currentText()]
+            self.combo_axis.clear()
+            for axis in selected_motor._motors.keys():
+                self.combo_axis.addItem(str(axis))
 
     # Метод остановки Redis сервера при закрытии программы
     def closeEvent(self, event):

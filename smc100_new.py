@@ -109,7 +109,7 @@ class SMC100(object):
       self._sleepfunc = sleepfunc
 
     self._silent = silent
-    self.port = port
+    self._port = port
     self._last_sendcmd_time = 0
 
     self._smcID = str(smcID)

@@ -36,7 +36,7 @@ class MotorPollingThread(QThread):
 
 
             # Задержка перед следующим опросом (например, 1 секунда)
-            time.sleep(1)
+            time.sleep(0.5)
 
     def update_motors(self, updated_motors):
             self.motors = updated_motors  # Обновляем список моторов
