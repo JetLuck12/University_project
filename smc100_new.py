@@ -109,24 +109,8 @@ class SMC100(object):
       self._sleepfunc = sleepfunc
 
     self._silent = silent
-
+    self.port = port
     self._last_sendcmd_time = 0
-
-    print('Connecting to SMC100 on %s' % port)
-
-    self._port = serial.Serial(
-        port = port,
-        baudrate = 57600,
-        bytesize = 8,
-        stopbits = 1,
-        parity = 'N',
-        xonxoff = True,
-        timeout = 0.050)
-
-    if self._port.isOpen():
-        print('Serial port is opened.')
-    else:
-        print('Failed to open serial port.')
 
     self._smcID = str(smcID)
 
@@ -489,7 +473,14 @@ class SMCMotorHW(object):
     DefaultPort = "/dev/ttyUSB0"
 
     def __init__(self, port=DefaultPort):
-        self.port = port
+        self.port = serial.Serial(
+        port = port,
+        baudrate = 57600,
+        bytesize = 8,
+        stopbits = 1,
+        parity = 'N',
+        xonxoff = True,
+        timeout = 0.050)
         self._motions = {}
 
     def getRevision(self, axis):
