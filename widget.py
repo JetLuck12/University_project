@@ -5,14 +5,26 @@ from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtCore import Signal
 from Status_poll import MotorPollingThread  # Импорт потока опроса
 
-#для интерфейса введи в консоль pyside6-uic main_window.ui -o main_window_ui.py
+# для интерфейса введи в консоль pyside6-uic main_window.ui -o main_window_ui.py
 
 # Шаблон команды
 message = {'cmd': '', 'motor': '', 'arg1': 0, 'arg2': 0}
 
 COMMANDS_WITHOUT_MOTOR = {"load", "save", "help"}
+COMMANDS_AND_ARGS = {
+                "load": {None, "Name", None},
+                "save": {None, "Name", None},
+                "create": {None, "Name", "Port"},
+                "add": {"Motor name", "Axis name", None},
+                "delete": {"Motor name", "Axis name", None},
+                "pos": {"Motor name", "Axis name", None},
+                "state": {"Motor name", "Axis name", None},
+                "start":  {"Motor name", "Axis name", "Position"},
+                "stop": {"Motor name", "Axis name", None},
+                "status": {"Motor name", "Axis name", None},
+                }
 
-# Основное окно приложения
+
 class MainWindow(QMainWindow, Ui_MainWindow):
     motors_updated = Signal(dict)
 
@@ -33,7 +45,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Устанавливаем команды в выпадающий список
         self.combo_command.addItems([
             "load", "save", "create", "add", "delete",
-            "pos", "state", "start", "stop", "status", "calibrate"
+            "pos", "state", "start", "stop", "status"
         ])
 
         # Установить текстовые поля и компоненты
