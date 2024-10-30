@@ -12,16 +12,16 @@ message = {'cmd': '', 'motor': '', 'arg1': 0, 'arg2': 0}
 
 COMMANDS_WITHOUT_MOTOR = {"load", "save", "help"}
 COMMANDS_AND_ARGS = {
-                "load": {None, "Name", None},
-                "save": {None, "Name", None},
-                "create": {None, "Name", "Port"},
-                "add": {"Motor name", "Axis name", None},
-                "delete": {"Motor name", "Axis name", None},
-                "pos": {"Motor name", "Axis name", None},
-                "state": {"Motor name", "Axis name", None},
-                "start":  {"Motor name", "Axis name", "Position"},
-                "stop": {"Motor name", "Axis name", None},
-                "status": {"Motor name", "Axis name", None},
+                "load": [None, "Name", None],
+                "save": [None, "Name", None],
+                "create": [None, "Name", "Port"],
+                "add": ["Motor name", "Axis name", None],
+                "delete": ["Motor name", "Axis name", None],
+                "pos": ["Motor name", "Axis name", None],
+                "state": ["Motor name", "Axis name", None],
+                "start":  ["Motor name", "Axis name", "Position"],
+                "stop": ["Motor name", "Axis name", None],
+                "status": ["Motor name", "Axis name", None],
                 }
 
 
@@ -102,10 +102,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # Отключение/включение выбора мотора в зависимости от команды
     def on_command_changed(self):
         selected_command = self.combo_command.currentText()
-        if selected_command in COMMANDS_WITHOUT_MOTOR:
-            self.combo_motor.setEnabled(False)  # Отключаем выбор мотора
+        motor = COMMANDS_AND_ARGS[selected_command][0]
+        arg1 = COMMANDS_AND_ARGS[selected_command][1]
+        arg2 = COMMANDS_AND_ARGS[selected_command][2]
+        if  motor == None:
+            self.combo_motor.setEnabled(False)
         else:
-            self.combo_motor.setEnabled(True)  # Включаем выбор мотора
+            self.combo_motor.setEnabled(True)
+
+        self.label_arg1.setText(arg1)
+
+        if  arg2 == None:
+            self.line_arg2.setEnabled(False)
+        else:
+            self.label_arg2.setText(arg2)
+            self.line_arg2.setEnabled(True)
 
     def on_motor_changed(self):
         if self.combo_motor.currentText() != '':
