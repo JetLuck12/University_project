@@ -1,0 +1,3 @@
+[submodule "Lcard/hiredis/hiredis"]
+	path = Lcard/hiredis/hiredis
+	url = git@github.com:redis/hiredis.git
