@@ -2,11 +2,11 @@
     "files": [
         "widget.py",
         "main_window.ui",
-        "Controller_interface.py",
-        "smc100_new.py",
-        "User_interface.py",
-        "Status_poll.py",
         "Redis_Wrapper/Redis_Wrapper.py",
-        "SMC_Wrapper/SMC_Wrapper.py"
+        "SMC_Wrapper/SMC_Wrapper.py",
+        "SMC_Wrapper/Controller_interface.py",
+        "SMC_Wrapper/smc100_new.py",
+        "SMC_Wrapper/Status_poll.py",
+        "SMC_Wrapper/User_interface.py"
     ]
 }
