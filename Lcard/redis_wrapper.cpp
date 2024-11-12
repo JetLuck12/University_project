@@ -1,5 +1,5 @@
 #include "redis_wrapper.h"
-#include "hiredis.h"
+#include "hiredis/hiredis/hiredis.h"
 
 void send_data_to_redis(redisContext* data_ctx, float* data, int length) {
     for (int i = 0; i < length; ++i) {

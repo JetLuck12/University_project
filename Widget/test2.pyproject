@@ -5,6 +5,8 @@
         "Controller_interface.py",
         "smc100_new.py",
         "User_interface.py",
-        "Status_poll.py"
+        "Status_poll.py",
+        "Redis_Wrapper/Redis_Wrapper.py",
+        "SMC_Wrapper/SMC_Wrapper.py"
     ]
 }

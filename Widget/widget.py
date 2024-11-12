@@ -1,4 +1,5 @@
 import sys
+import Redis_Wrapper.Redis_Wrapper
 from Controller_interface import SMCBaseMotorController
 from main_window_ui import Ui_MainWindow
 from PySide6.QtWidgets import QApplication, QMainWindow
@@ -9,6 +10,8 @@ from Status_poll import MotorPollingThread  # Импорт потока опро
 
 # Шаблон команды
 message = {'cmd': '', 'motor': '', 'arg1': 0, 'arg2': 0}
+
+photodiod_id = 11
 
 COMMANDS_WITHOUT_MOTOR = {"load", "save", "help"}
 COMMANDS_AND_ARGS = {
@@ -24,6 +27,10 @@ COMMANDS_AND_ARGS = {
                 "status": ["Motor name", "Axis name", None],
                 }
 
+REDIS_IP = '127.0.0.1'
+REDIS_PORT = 6379
+COMMAND_CHANNEL = 'command_channel'
+DATA_CHANNEL = 'data_channel'
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     motors_updated = Signal(dict)
@@ -62,6 +69,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.motor_polling_thread.motor_status_received.connect(self.update_motor_status)
         self.motor_polling_thread.start()
 
+        self.redis = Redis_Wrapper(REDIS_IP, REDIS_PORT)
+
     def execute_command(self):
         command = self.combo_command.currentText()
         motor = self.combo_motor.currentText()
@@ -74,6 +83,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             elif command == "end":
                 message['cmd'] = 'end'
                 self.close()
+            elif command == "calibrate":
+                self.calibrate(arg1, arg2)
             else:
                 if command and motor:
                     # Проверяем, что команда не пустая
@@ -143,6 +154,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.motors_updated.emit(self.motors)
         self.text_output.append(f"Added motor: {motor_name}")
 
+    def calibrate(self, sizeX, sizeY):
+        motor = self.combo_motor.currentText()
+        lower_limit = self.motors[motor].GetAxisExtraPar(photodiod_id, 'lower_limit')
+        upper_limit = self.motors[motor].GetAxisExtraPar(photodiod_id, 'upper_limit')
+        self.motors[motor].execute_command('start', photodiod_id, lower_limit)
+        self.redis.send_command("start")
+        self.motors[motor].execute_command('start', photodiod_id, upper_limit)
+        self.redis.send_command("stop")
+        self.redis.receive_command()
 
 
 

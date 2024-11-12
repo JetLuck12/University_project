@@ -1,7 +1,7 @@
 #include "Lcard_wrapper.h"
 #include <stdio.h>
 
-#define SIZE 100000
+#define SIZE 100
 
 PTLTR114 init_photodiod() {
     printf("start initialization");
@@ -102,12 +102,12 @@ PTLTR114 init_photodiod() {
 
 float get_ltr_data(TLTR114* ltr)
 {
-    int array_size = 160;
+    int array_size = 1;
 
     DWORD data[SIZE];
-    double dest[80];
+    double dest[1];
 
-    int error = LTR114_Recv(ltr, data, NULL, 80 * ltr->FrameLength, 100000);
+    int error = LTR114_Recv(ltr, data, NULL, ltr->FrameLength, 100);
     if (error < 0) {
         printf("LTR114_Recv Error with code: %d", error);
         LTR114_Close(ltr);
@@ -132,6 +132,8 @@ float get_ltr_data(TLTR114* ltr)
 
         return 1;
     }
+    else:
+        printf("No data in LTR114_Recv ", error);
     double mean_data;
     double sum = 0;
     for (int j = 0; j < 200; j++)

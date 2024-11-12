@@ -1,16 +1,15 @@
 #include <windows.h>
 #include <stdio.h>
-#include "hiredis.h"
+#include "hiredis/hiredis/hiredis.h"
 #include "Lcard_wrapper.h"
 #include "redis_wrapper.h"
 
-#define SIZE 100000
-#define INTERVAL 1100
+#define MAX_SIZE 100000
 #define REDIS_IP "127.0.0.1"
 #define REDIS_PORT 6379
 
 void measurement_loop(redisContext* command_ctx, redisContext* data_ctx, PTLTR114 ltr) {
-    float measurements[SIZE];
+    float measurements[MAX_SIZE];
     int measurement_count = 0;
 
     while (1) {
@@ -26,7 +25,7 @@ void measurement_loop(redisContext* command_ctx, redisContext* data_ctx, PTLTR11
         float data_point = get_ltr_data(ltr);
         measurements[measurement_count++] = data_point;
 
-        if (measurement_count == SIZE) {
+        if (measurement_count == MAX_SIZE) {
             send_data_to_redis(data_ctx, measurements, measurement_count);
             measurement_count = 0;
         }
@@ -39,7 +38,7 @@ void measurement_loop(redisContext* command_ctx, redisContext* data_ctx, PTLTR11
 }
 
 int main() {
-    printf("Program starting...\n");
+    printf("Programm starting...\n");
     fflush(stdout);
 
     // Initialize Redis contexts for command and data channels
