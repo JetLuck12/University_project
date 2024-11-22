@@ -1,4 +1,4 @@
-from smc100_new import SMCMotorHW
+from SMC_Wrapper.smc100_new import SMCMotorHW
 import json
 
 class SMCBaseMotorController():

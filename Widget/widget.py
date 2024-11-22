@@ -1,10 +1,12 @@
 import sys
-import Redis_Wrapper.Redis_Wrapper
-from Controller_interface import SMCBaseMotorController
+from Redis_Wrapper.Redis_Wrapper import Redis_Wrapper_class
+from SMC_Wrapper.Controller_interface import SMCBaseMotorController
 from main_window_ui import Ui_MainWindow
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtCore import Signal
-from Status_poll import MotorPollingThread  # Импорт потока опроса
+from SMC_Wrapper.Status_poll import MotorPollingThread  # Импорт потока опроса
+import paho.mqtt.client as mqtt
+import json
 
 # для интерфейса введи в консоль pyside6-uic main_window.ui -o main_window_ui.py
 
@@ -24,13 +26,19 @@ COMMANDS_AND_ARGS = {
                 "state": ["Motor name", "Axis name", None],
                 "start":  ["Motor name", "Axis name", "Position"],
                 "stop": ["Motor name", "Axis name", None],
-                "status": ["Motor name", "Axis name", None],
+                "status": ["Motor name", "Axis name", None]
                 }
 
 REDIS_IP = '127.0.0.1'
 REDIS_PORT = 6379
 COMMAND_CHANNEL = 'command_channel'
 DATA_CHANNEL = 'data_channel'
+
+# Настройки MQTT
+MQTT_BROKER = "127.0.0.1"
+MQTT_COMMAND_TOPIC = "lcard/command"
+MQTT_DATA_TOPIC = "lcard/data"
+PHOTODIOD_COMMANDS = {"start photodiod measurement", "stop photodiod measurement", "calibrate"}
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     motors_updated = Signal(dict)
@@ -52,7 +60,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Устанавливаем команды в выпадающий список
         self.combo_command.addItems([
             "load", "save", "create", "add", "delete",
-            "pos", "state", "start", "stop", "status"
+            "pos", "state", "start", "stop", "status","choose photodiod"
         ])
 
         # Установить текстовые поля и компоненты
@@ -69,7 +77,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.motor_polling_thread.motor_status_received.connect(self.update_motor_status)
         self.motor_polling_thread.start()
 
-        self.redis = Redis_Wrapper(REDIS_IP, REDIS_PORT)
+        self.redis = Redis_Wrapper_class(REDIS_IP, REDIS_PORT)
+
+        # Настройка MQTT
+        self.mqtt_client = mqtt.Client()
+        self.mqtt_client.on_connect = self.on_connect
+        self.mqtt_client.on_message = self.on_message
+        self.mqtt_client.connect(MQTT_BROKER)
+        self.mqtt_client.loop_start()
 
     def execute_command(self):
         command = self.combo_command.currentText()
@@ -77,17 +92,26 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         arg1 = self.line_arg1.text().strip()
         arg2 = self.line_arg2.text().strip()
 
-        if command:
+        if command in PHOTODIOD_COMMANDS:
+            # Формируем команду для отправки через MQTT
+            payload = {
+                "cmd": command,
+                "motor": motor,
+                "arg1": arg1,
+                "arg2": arg2
+            }
+            self.mqtt_client.publish(MQTT_COMMAND_TOPIC, json.dumps(payload))
+            self.text_output.append(f"Команда '{command}' отправлена через MQTT.")
+        else:
             if command == "create":
                 self.add_motor(arg1, arg2)
             elif command == "end":
                 message['cmd'] = 'end'
                 self.close()
-            elif command == "calibrate":
-                self.calibrate(arg1, arg2)
+            elif command == "choose photodiod":
+                self.init_redis_mqtt()
             else:
                 if command and motor:
-                    # Проверяем, что команда не пустая
                     if not command.strip():
                         self.text_output.append("Command cannot be empty")
                         return
@@ -95,6 +119,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.text_output.append(f"response:{response}")
                 else:
                     self.text_output.append("Not enough arguments")
+
+    def on_connect(self, client, userdata, flags, rc):
+        """Обработка подключения к MQTT."""
+        print(f"Подключено к MQTT брокеру с кодом {rc}")
+        client.subscribe(MQTT_DATA_TOPIC)
+
+    def on_message(self, client, userdata, msg):
+        """Обработка входящих данных от перемычки."""
+        data = msg.payload.decode()
+        print(f"Получены данные: {data}")
+        self.text_output.append(f"Received data: {data}")
 
     # Обработчик обновления статуса моторов
     def update_motor_status(self, motor_data):
@@ -164,6 +199,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.redis.send_command("stop")
         self.redis.receive_command()
 
+
+    def init_redis_mqtt(self):
+        def on_connect(client, userdata, flags, rc):
+            """Обработка подключения к MQTT."""
+            print(f"Подключено к MQTT брокеру с кодом {rc}")
+            client.subscribe(MQTT_DATA_TOPIC)
+
+        def on_message(client, userdata, msg):
+            """Обработка входящих данных от перемычки."""
+            data = msg.payload.decode()
+            print(f"Получены данные: {data}")
+        self.mqtt_client = mqtt.Client()
+
+        self.mqtt_client.on_connect = on_connect
+        self.mqtt_client.on_message = on_message
+
+        self.mqtt_client.connect(MQTT_BROKER)
+
+        self.mqtt_client.loop_start()
 
 
 if __name__ == "__main__":

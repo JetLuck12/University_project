@@ -1,7 +1,7 @@
 # This Python file uses the following encoding: utf-8
 import redis
 
-class Redis_Wrapper:
+class Redis_Wrapper_class:
     def __init__(self, ip, port):
         self.redis = redis.StrictRedis(host=ip, port=port, decode_responses=True)
 

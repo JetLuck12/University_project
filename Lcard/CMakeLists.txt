@@ -15,7 +15,8 @@ set(LCARD_DIR "C:/Qt/Labs/Lcard/Lcard_packs")
 add_executable(MyExecutable main.cpp
     Lcard_wrapper.h
     Lcard_wrapper.cpp
-    redis_wrapper.h redis_wrapper.cpp)
+    redis_wrapper.h redis_wrapper.cpp
+   )
 
 # Укажите путь к заголовочным файлам
 include_directories(${HIREDIS_DIR})

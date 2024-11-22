@@ -8,7 +8,7 @@
 #define REDIS_IP "127.0.0.1"
 #define REDIS_PORT 6379
 
-void measurement_loop(redisContext* command_ctx, redisContext* data_ctx, PTLTR114 ltr) {
+void make_measurement(redisContext* command_ctx, redisContext* data_ctx, PTLTR114 ltr) {
     float measurements[MAX_SIZE];
     int measurement_count = 0;
 
@@ -68,7 +68,7 @@ int main() {
     }
 
     // Start measurement loop
-    measurement_loop(command_ctx, data_ctx, ltr);
+    make_measurement(command_ctx, data_ctx, ltr);
 
     printf("Measurement stopped.\n");
     redisFree(command_ctx);
