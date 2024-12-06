@@ -4,13 +4,13 @@
 #include "Lcard_wrapper.h"
 #include "redis_wrapper.h"
 
-#define MAX_SIZE 100000
+#define MAX_SIZE 1
 #define REDIS_IP "127.0.0.1"
 #define REDIS_PORT 6379
 
 void make_measurement(redisContext* command_ctx, redisContext* data_ctx, PTLTR114 ltr) {
     float measurements[MAX_SIZE];
-    int measurement_count = 0;
+    int measurement_count = 1;
 
     while (1) {
         // Check for stop command
@@ -23,9 +23,9 @@ void make_measurement(redisContext* command_ctx, redisContext* data_ctx, PTLTR11
 
         // Collect data
         float data_point = get_ltr_data(ltr);
-        measurements[measurement_count++] = data_point;
+        measurements[0] = data_point;
 
-        if (measurement_count == MAX_SIZE) {
+        if (measurement_count > MAX_SIZE) {
             send_data_to_redis(data_ctx, measurements, measurement_count);
             measurement_count = 0;
         }
@@ -41,6 +41,16 @@ int main() {
     printf("Programm starting...\n");
     fflush(stdout);
 
+    // Initialize photodiode
+    PTLTR114 ltr = init_photodiod();
+    if (ltr == NULL) {
+        printf("Error initializing photodiode.\n");
+        return 1;
+    }
+
+    float measurements[MAX_SIZE];
+    int measurement_count = 1;
+
     // Initialize Redis contexts for command and data channels
     redisContext* command_ctx = redisConnect(REDIS_IP, REDIS_PORT);
     redisContext* data_ctx = redisConnect(REDIS_IP, REDIS_PORT);
@@ -49,26 +59,22 @@ int main() {
         return 1;
     }
 
-    // Wait for start command
-    while (1) {
+    while(true){
+        // Wait for start command
         redisReply* reply = (redisReply*)redisCommand(command_ctx, "BLPOP command_channel 0");
         if (reply != NULL && strcmp(reply->element[1]->str, "start") == 0) {
             printf("Start command received.\n");
             freeReplyObject(reply);
-            break;
+            make_measurement(command_ctx, data_ctx, ltr);
         }
         freeReplyObject(reply);
-    }
 
-    // Initialize photodiode
-    PTLTR114 ltr = init_photodiod();
-    if (ltr == NULL) {
-        printf("Error initializing photodiode.\n");
-        return 1;
-    }
 
-    // Start measurement loop
-    make_measurement(command_ctx, data_ctx, ltr);
+        // Collect data
+        float data_point = get_ltr_data(ltr);
+        measurements[0] = data_point;
+        send_data_to_redis(data_ctx, measurements, measurement_count);
+    }
 
     printf("Measurement stopped.\n");
     redisFree(command_ctx);

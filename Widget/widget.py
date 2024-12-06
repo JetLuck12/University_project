@@ -26,18 +26,19 @@ COMMANDS_AND_ARGS = {
                 "state": ["Motor name", "Axis name", None],
                 "start":  ["Motor name", "Axis name", "Position"],
                 "stop": ["Motor name", "Axis name", None],
-                "status": ["Motor name", "Axis name", None]
+                "status": ["Motor name", "Axis name", None],
+                "connect to Redis": [None,None,None]
                 }
 
 REDIS_IP = '127.0.0.1'
 REDIS_PORT = 6379
-COMMAND_CHANNEL = 'command_channel'
-DATA_CHANNEL = 'data_channel'
+REDIS_COMMAND_CHANNEL = 'command_channel'
+REDIS_DATA_CHANNEL = 'data_channel'
 
 # Настройки MQTT
 MQTT_BROKER = "127.0.0.1"
-MQTT_COMMAND_TOPIC = "lcard/command"
-MQTT_DATA_TOPIC = "lcard/data"
+MQTT_REDIS_COMMAND_TOPIC = "lcard/command"
+MQTT_REDIS_DATA_TOPIC = "lcard/data"
 PHOTODIOD_COMMANDS = {"start photodiod measurement", "stop photodiod measurement", "calibrate"}
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -58,10 +59,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.motors = {}
 
         # Устанавливаем команды в выпадающий список
-        self.combo_command.addItems([
-            "load", "save", "create", "add", "delete",
-            "pos", "state", "start", "stop", "status","choose photodiod"
-        ])
+        self.combo_command.addItems(COMMANDS_AND_ARGS.keys())
 
         # Установить текстовые поля и компоненты
         self.text_output.append("Welcome to Motor Controller")
@@ -79,12 +77,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.redis = Redis_Wrapper_class(REDIS_IP, REDIS_PORT)
 
-        # Настройка MQTT
-        self.mqtt_client = mqtt.Client()
-        self.mqtt_client.on_connect = self.on_connect
-        self.mqtt_client.on_message = self.on_message
-        self.mqtt_client.connect(MQTT_BROKER)
-        self.mqtt_client.loop_start()
+        self.calibration_flag = False
+        self.calibration_array = []
 
     def execute_command(self):
         command = self.combo_command.currentText()
@@ -100,7 +94,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 "arg1": arg1,
                 "arg2": arg2
             }
-            self.mqtt_client.publish(MQTT_COMMAND_TOPIC, json.dumps(payload))
+            self.mqtt_client.publish(MQTT_REDIS_COMMAND_TOPIC, json.dumps(payload))
             self.text_output.append(f"Команда '{command}' отправлена через MQTT.")
         else:
             if command == "create":
@@ -108,7 +102,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             elif command == "end":
                 message['cmd'] = 'end'
                 self.close()
-            elif command == "choose photodiod":
+            elif command == "connect to Redis":
                 self.init_redis_mqtt()
             else:
                 if command and motor:
@@ -123,7 +117,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_connect(self, client, userdata, flags, rc):
         """Обработка подключения к MQTT."""
         print(f"Подключено к MQTT брокеру с кодом {rc}")
-        client.subscribe(MQTT_DATA_TOPIC)
+        client.subscribe(MQTT_REDIS_DATA_TOPIC)
 
     def on_message(self, client, userdata, msg):
         """Обработка входящих данных от перемычки."""
@@ -144,6 +138,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.motor_state.clear()
             self.motor_pos.display(status['position'])
             self.motor_state.append(status['state'])
+
+    # Обработчик обновления статуса моторов
+    def update_photo_status(self, diod_data):
+        self.photodiod_pos.clear()
+        self.photodiod_pos.display(diod_data['position'])
+        self.photodiod_data.clear()
+        self.photodiod_data.display(diod_data['intensity'])
 
     # Отключение/включение выбора мотора в зависимости от команды
     def on_command_changed(self):
@@ -190,26 +191,41 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.text_output.append(f"Added motor: {motor_name}")
 
     def calibrate(self, sizeX, sizeY):
+        self.calibration_flag = True
+        self.calibration_array = []
         motor = self.combo_motor.currentText()
         lower_limit = self.motors[motor].GetAxisExtraPar(photodiod_id, 'lower_limit')
         upper_limit = self.motors[motor].GetAxisExtraPar(photodiod_id, 'upper_limit')
         self.motors[motor].execute_command('start', photodiod_id, lower_limit)
+        while(self.motors[motor].execute_command('pos', photodiod_id) != lower_limit):
+            pass
         self.redis.send_command("start")
         self.motors[motor].execute_command('start', photodiod_id, upper_limit)
+        while(self.motors[motor].execute_command('pos', photodiod_id) != upper_limit):
+            pass
         self.redis.send_command("stop")
-        self.redis.receive_command()
+        max_pos = 0
+        max_int = 0
+        for item in self.calibration_array:
+            if item['intensity'] > max_int:
+                max_int = item['intensity']
+                max_pos = item['position']
+        print(f"Find the best position {max_pos} and intansity {max_int}")
 
 
     def init_redis_mqtt(self):
         def on_connect(client, userdata, flags, rc):
             """Обработка подключения к MQTT."""
             print(f"Подключено к MQTT брокеру с кодом {rc}")
-            client.subscribe(MQTT_DATA_TOPIC)
+            client.subscribe(MQTT_REDIS_DATA_TOPIC)
 
         def on_message(client, userdata, msg):
             """Обработка входящих данных от перемычки."""
             data = msg.payload.decode()
             print(f"Получены данные: {data}")
+            self.update_photo_status(data)
+            if (self.calibration_flag):
+                self.calibration_array.append(data)
         self.mqtt_client = mqtt.Client()
 
         self.mqtt_client.on_connect = on_connect
@@ -218,6 +234,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.mqtt_client.connect(MQTT_BROKER)
 
         self.mqtt_client.loop_start()
+
 
 
 if __name__ == "__main__":

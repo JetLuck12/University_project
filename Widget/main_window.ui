@@ -688,11 +688,11 @@
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Photodiod status&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
    </widget>
-   <widget class="QLCDNumber" name="photodiod_pos">
+   <widget class="QLCDNumber" name="photodiod_power">
     <property name="geometry">
      <rect>
       <x>130</x>
-      <y>340</y>
+      <y>320</y>
       <width>161</width>
       <height>23</height>
      </rect>
@@ -1147,7 +1147,7 @@
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>320</y>
+      <y>300</y>
       <width>63</width>
       <height>20</height>
      </rect>
@@ -1160,7 +1160,7 @@
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>340</y>
+      <y>320</y>
       <width>63</width>
       <height>20</height>
      </rect>
@@ -1169,11 +1169,11 @@
      <string>Intensity</string>
     </property>
    </widget>
-   <widget class="QLCDNumber" name="photodiod_data">
+   <widget class="QLCDNumber" name="photodiod_pos">
     <property name="geometry">
      <rect>
       <x>130</x>
-      <y>320</y>
+      <y>300</y>
       <width>161</width>
       <height>23</height>
      </rect>
@@ -1694,29 +1694,6 @@
     </property>
     <property name="text">
      <string>Calibrate</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_10">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>300</y>
-      <width>131</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Choose photodiod</string>
-    </property>
-   </widget>
-   <widget class="QComboBox" name="combo_diod">
-    <property name="geometry">
-     <rect>
-      <x>130</x>
-      <y>300</y>
-      <width>161</width>
-      <height>22</height>
-     </rect>
     </property>
    </widget>
   </widget>

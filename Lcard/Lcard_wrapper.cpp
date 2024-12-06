@@ -1,7 +1,7 @@
 #include "Lcard_wrapper.h"
 #include <stdio.h>
 
-#define SIZE 100
+#define SIZE 1
 
 PTLTR114 init_photodiod() {
     printf("start initialization");
@@ -132,21 +132,8 @@ float get_ltr_data(TLTR114* ltr)
 
         return 1;
     }
-    else:
-        printf("No data in LTR114_Recv ", error);
-    double mean_data;
-    double sum = 0;
-    for (int j = 0; j < 200; j++)
-    {
-        sum += dest[j];
+    else{
+        printf("No data in LTR114_Recv : %d", error);
     }
-    mean_data = sum / 200;
-
-    for (int i = 0; i < 250; i++)
-    {
-        printf("%d : %lf\n", i, mean_data);
-    }
-    printf("Work");
-    return mean_data;
-
+    return dest[0];
 }
